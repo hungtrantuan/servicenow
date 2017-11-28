@@ -1,7 +1,7 @@
 var MFTV2Log = Class.create();
 MFTV2Log.prototype = {
-    DEBUG_MODE: gs.getProperty('dxc.mftv2.debug_mode', 'false') == 'true',
-    LEVEL: gs.getProperty('dxc.mftv2.log_level', GSLog.WARNING),
+    DEBUG_MODE: gs.getProperty('debug_mode', 'false') == 'true',
+    LEVEL: gs.getProperty('log_level', GSLog.WARNING),
 	INT_ID: 'MFTV2',
 	
 	/**

@@ -544,7 +544,7 @@ MFTV2MIDServer.prototype = {
 		params.partNumber		= probe.getParameter("partNumber");
 		params.totalPart		= probe.getParameter("totalPart");
 		
-		// Debug mode is normally the value of system properties: dxc.mftv2.debug_mode
+		// Debug mode is normally the value of system properties: debug_mode
 		params.debugMode = false;
 		var debugMode			= probe.getParameter("debugMode");
 		if (debugMode != null && ('' + debugMode) == 'true') {

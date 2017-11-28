@@ -1,11 +1,11 @@
 var MFTV2Transfer = Class.create();
 MFTV2Transfer.prototype = {
-	DEBUG_MODE: gs.getProperty('dxc.mftv2.debug_mode', 'false') == 'true',
+	DEBUG_MODE: gs.getProperty('debug_mode', 'false') == 'true',
 	DEFAULT_SCRIPT: '(new MFTV2MIDServer()).saveFile2MIDServer();',
 	DEFAULT_TABLE: 'u_mft_file_spooling_document',
 	DEFAULT_RETURN_FIELDS: 'u_data',
 	DEFAULT_ID_FIELD_NAME: 'u_file_spooling',
-	DEFAULT_MID_FOLDER: gs.getProperty('dxc.mftv2.midserver.directory', 'd:\\MFTBatch'),
+	DEFAULT_MID_FOLDER: gs.getProperty('midserver.directory', 'd:\\MFTBatch'),
 	
 	CALLER: '',
 	
