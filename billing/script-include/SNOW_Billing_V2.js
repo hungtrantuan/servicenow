@@ -5,10 +5,8 @@ SNOW_Billing_V2.prototype = Object.extendsObject(BillingV2Base, {
 		ADDED: 'added',
 		PREPARED_TO_SEND: 'preparedtosend',
 		SENT: 'sent',
+		PENDING: 'pending',
 	},
-	
-	currentRecord: null,
-	previousRecord: null,
 	
 	/**
 	* Constructor
@@ -23,31 +21,53 @@ SNOW_Billing_V2.prototype = Object.extendsObject(BillingV2Base, {
 	
 	/**
 	* Is called by the business rule to process inserted/created record.
-	* @param previous
 	* @param current
-	* @param integration_name
+	* @param previous
 	*/
-	ProcessRule: function(previous, current) {
+	ProcessRule: function(current, previous) {
 		var mn = 'ProcessRule';
 		
-		// Load all triggers across integrations
+		// Load all triggers accross integrations
 		var triggers = this.loadTrigger();
 		if (triggers.length >  0) {
 			// Check each trigger retrieved
 			for (var i in triggers) {
 				var trigger = triggers[i];
 				
+				//------------------------------------
 				// Evaluate whether trigger can be executed
-				try {
-					if (!eval(trigger.u_condition)) {
-						this.log.info("Trigger's condition does not match [" + this.TABLENAMES.TRIGGER + ":" + trigger.sys_id + "]", mn);
+				//------------------------------------
+				var cond = true;
+				if (JSUtil.notNil(trigger.u_condition)) {
+					// Evaluate condition
+					try {
+						cond = eval(trigger.u_condition);
+					} catch (error) {
+						this.log.warn("Evaluating trigger's condition error [" + this.TABLENAMES.TRIGGER + ":" + trigger.sys_id + "]: " + error, mn);
 						continue;
-					}					
-				} catch (error) {
-					this.log.info("Evaluating trigger's failed [" + this.TABLENAMES.TRIGGER + ":" + trigger.sys_id + "]: " + error, mn);
+					}
+				}
+				if (cond) {
+					if (trigger.u_advanced) {
+						// Evaluate advanced script
+						try {
+							if (!eval(trigger.u_script)) {
+								this.log.info("Trigger's script evaluated false [" + this.TABLENAMES.TRIGGER + ":" + trigger.sys_id + "]", mn);
+								continue;
+							}
+						} catch (error) {
+							this.log.warn("Evaluating trigger's script error [" + this.TABLENAMES.TRIGGER + ":" + trigger.sys_id + "]: " + error, mn);
+							continue;
+						}
+					}
+				} else {
+					this.log.info("Trigger's condition evaluated false [" + this.TABLENAMES.TRIGGER + ":" + trigger.sys_id + "]", mn);
 					continue;
 				}
 				
+				//------------------------------------
+				// Perform the transformation
+				//------------------------------------
 				var fields = {};
 				// Load data mappings configured for this trigger
 				var mappings = this.loadDataMapping(trigger.sys_id.toString());
@@ -65,7 +85,7 @@ SNOW_Billing_V2.prototype = Object.extendsObject(BillingV2Base, {
 							try {
 								var params = {
 									'srcValue': value,
-									//'grData': grData,
+									//'params': {'seq_number': seq_number},
 									'current': current,
 								};
 								//var evaluator = new GlideScopedEvaluator();
@@ -112,8 +132,8 @@ SNOW_Billing_V2.prototype = Object.extendsObject(BillingV2Base, {
 				var dataLine = JSON.stringify(fields);
 				this.log.debug('Data line = [' + dataLine + ']', mn);
 				
-				// Save record to outbound table, set status to "Added"
-				this._addRecordToOutbound(trigger, current.getTableName(), current.sys_id.toString(), dataLine);
+				// Save record to outbound table, set status to "Pending"
+				this._addRecordToOutbound(trigger, current.getTableName(), current.sys_id.toString(), dataLine, this.OUTBOUND_STATUS.PENDING);
 			}
 		} else {
 			this.log.info(this.ERRMSGS.NO_TRIGGER, mn);
@@ -121,14 +141,15 @@ SNOW_Billing_V2.prototype = Object.extendsObject(BillingV2Base, {
 	},
 	
 	/**
-	* Write record to outbound table, set status to "Added"
+	* Write record to outbound table, set status to "Pending"
 	* @param trigger
 	* @param table
 	* @param source_record
 	* @param line
+	* @param status
 	* @private
 	*/
-	_addRecordToOutbound: function(trigger, table, source_record, line) {
+	_addRecordToOutbound: function(trigger, table, source_record, line, status) {
 		// Initialize GlideRecord object
 		var grOutbound = new GlideRecord(this.TABLENAMES.OUTBOUND);
 		grOutbound.initialize();
@@ -138,13 +159,64 @@ SNOW_Billing_V2.prototype = Object.extendsObject(BillingV2Base, {
 		grOutbound.u_source_trigger		= trigger.sys_id.toString();
 		grOutbound.u_table				= table;
 		grOutbound.u_document_id		= source_record;
-		grOutbound.u_status				= this.OUTBOUND_STATUS.ADDED;
+		grOutbound.u_status				= status;
 		grOutbound.u_data				= line;
 		
 		// Insert record into DB
 		grOutbound.insert();
 	},
 	
+	/**
+	* Called by the scheduler to update data in staging table
+	* @param trigger
+	* @param nDay
+	*/
+	ProcessNDayRule: function(trigger, nDay) {
+		var mn = 'ProcessNDayRule';
+		// Parsing value of nDay
+		this.log.debug("Process outbound data [trigger sys_id=" + trigger.sys_id + "] >= "+nDay+" day(s)", mn);
+		var numDay = parseInt(nDay, 10);
+		if (numDay == 'NaN') {
+			numDay = 0;
+		}
+		
+		// Get n-day value
+		var updatedDT = new GlideDateTime();
+		if (numDay > 0) {
+			updatedDT.addDaysUTC(-numDay);
+		}
+		
+		// Extract data from 'staging' table
+		this.log.debug("Query data from '" + this.TABLENAMES.OUTBOUND + "' table [trigger sys_id=" + trigger.sys_id + "] that has sys_created_on<=" + updatedDT.getValue(), mn);
+		var grRecord = this._getRecordFromOutboundNDay(trigger.sys_id.toString(), this.OUTBOUND_STATUS.PENDING, updatedDT.getValue());
+		var nCnt = 0;
+		while (grRecord.next()) {
+			// Update value status to 'Added'
+			this._updateOutboundRecord(grRecord.sys_id.toString(), '', this.OUTBOUND_STATUS.ADDED);
+			nCnt++;
+		}
+		this.log.info("Updated ["+nCnt+"] entry in '" + this.TABLENAMES.OUTBOUND + "' table [trigger sys_id=" + trigger.sys_id + "]", mn);
+	},
+	
+	/**
+	* Query record(s) from outbound table by status and sys_updated_on <= date
+	* @param trigger_id
+	* @param status
+	* @param date
+	* @return {GlideRecord}
+	* @private
+	*/
+	_getRecordFromOutboundNDay: function(trigger_id, status, date) {
+		// Query data from Outbound table
+		var grOutbound = new GlideRecord(this.TABLENAMES.OUTBOUND);
+		grOutbound.addQuery('u_source_trigger', trigger_id);
+		grOutbound.addQuery('u_status', status);
+		grOutbound.addQuery('sys_created_on', '<=', date);
+		grOutbound.query();
+		
+		// Return GlideRecord object for further processing
+		return grOutbound;
+	},
 	
 	/**
 	* Called by the process that builds the outbound report
