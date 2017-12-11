@@ -155,7 +155,7 @@ ECCQueueFileReader.prototype = {
 				
 				// If the '</stdout>' tag was encountered then there may still be data left on that line (up to the tag)
 				this._rawline = (stdIdx < 0) ? '' : (this._rawline.substring(0, stdIdx));
-            }
+			}
 			
 			// ----------------
 			// 4. Decode the _rawline and add it to decoded buffer
