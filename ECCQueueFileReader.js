@@ -4,7 +4,6 @@ ECCQueueFileReader.prototype = {
 	PAYLOAD: '', // Payload of ECC entry
 	ECCRecord: null, // Entry from ECC queue
 	reader: null, // Reader object
-	buffer: '', // Buffer
 	
 	// Java packages
 	StringReader: Packages.java.io.StringReader,
