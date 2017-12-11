@@ -144,17 +144,17 @@ ECCQueueFileReader.prototype = {
 			//      3) the '</stdout>' xml tag is encountered
 			// ----------------
 			var stdIdx = -1;
-            if (JSUtil.nil(this._rawline) || this._rawline.startsWith('(') || (stdIdx = this._rawline.indexOf('</stdout>')) >= 0) {
+			if (JSUtil.nil(this._rawline) || this._rawline.startsWith('(') || (stdIdx = this._rawline.indexOf('</stdout>')) >= 0) {
 				this._eof = true; // Flag that no more data is available for the file
 				
 				// Set the file name to the next file name encountered (if any)
-                this._fileName = '';
-                if (this._rawline && this._rawline.startsWith('(')) {
+				this._fileName = '';
+				if (this._rawline && this._rawline.startsWith('(')) {
 					this._fileName = this._rawline.substring(1, this._rawline.indexOf(')'));
 				}
 				
 				// If the '</stdout>' tag was encountered then there may still be data left on that line (up to the tag)
-                this._rawline = (stdIdx < 0) ? '' : (this._rawline.substring(0, stdIdx));
+				this._rawline = (stdIdx < 0) ? '' : (this._rawline.substring(0, stdIdx));
             }
 			
 			// ----------------
