@@ -167,7 +167,7 @@ ECCQueueFileReader.prototype = {
 				// Use the decodable-part of the mime string
 				bytes = GlideStringUtil.base64DecodeAsBytes(this._linebuffer.substring(0, idx));
 			    this._linebuffer = this._linebuffer.substring(idx); // Use the rest later
-		    }  else {
+			}  else {
 				this._linebuffer = '';
 			}
 
