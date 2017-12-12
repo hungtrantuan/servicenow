@@ -71,7 +71,7 @@ ECCQueueFileReader.prototype = {
 		var result = '';
 		if (JSUtil.has(this.reader)) {
 			// Read 1 line from 'reader'
-			var line = this.reader.readLine();
+			var line = ''+this.reader.readLine();
 			
 			// Parse the 1st line, which also contains XML tag
 			var result = this.regexpPattern.exec(line);
@@ -97,10 +97,10 @@ ECCQueueFileReader.prototype = {
 			// ----------------
 			// 1. Check if the "decoded" buffer contains at least one complete row + (LF/CR/CRLF)
 			// ----------------
-			var ndx, ch, dataLine;
+			var idx, ch;
 			var quoted = false;
-			for (ndx = 0; ndx < this._buffer.length; ndx++) {
-				ch = this._buffer[ndx];
+			for (idx = 0; idx < this._buffer.length; idx++) {
+				ch = this._buffer[idx];
 				if (!quoted && (ch == '\n' || ch == '\r')) {
 					// Break if found a CR\LF\CRLF sequence that occurs outside of double-quotes
 					break;
@@ -110,31 +110,31 @@ ECCQueueFileReader.prototype = {
 					quoted = !quoted;
 				}
 			}
-			if (ndx < this._buffer.length) {
+			if (idx < this._buffer.length) {
 				// Found CR\LR\CRLF character in middle of decoded line
-				dataLine = this._buffer.substring(0, ndx);
-				ndx++; // Skip current CR\LF character
+				this._line = this._buffer.substring(0, idx);
+				idx++; // Skip current CR\LF character
 				
 				// Check if next character is 'LF'
-				if (ch == '\r' && ndx < this._buffer.length && this._buffer[ndx] == '\n') {
-					ndx++; //Skip LF in CRLF sequence
+				if (ch == '\r' && idx < this._buffer.length && this._buffer[idx] == '\n') {
+					idx++; //Skip LF in CRLF sequence
 				}
-				this._buffer = this._buffer.substring(ndx);
-				return dataLine;
+				this._buffer = this._buffer.substring(idx); // Keep remain data in buffer to use later
+				return this._line;
 			}
 			
 			// If the "_eof" flag is set (signals end of file raw data) then only return what is left in the buffer
 			// The flag will be reset externally to return the next file's data in a multi-file stream
 			if (this._eof) {
-				dataLine = (this._buffer.length > 0) ? this._buffer : null;
+				this._line = (this._buffer.length > 0) ? this._buffer : null;
 				this._buffer = '';
-				return dataLine;
+				return this._line;
 			}
 			
 			// ----------------
 			// 2. Read raw data-line from 'reader'
 			// ----------------
-			this._rawline = (this.reader) ? (''+this.reader.readLine()) : null;
+			this._rawline = (JSUtil.has(this.reader)) ? (''+this.reader.readLine()) : null;
 			
 			// ----------------
 			// 3. Check if the end of file has been reached
@@ -161,50 +161,49 @@ ECCQueueFileReader.prototype = {
 			// 4. Decode the _rawline and add it to decoded buffer
 			// ----------------
 			this._linebuffer += this._rawline;
-			var bytes = GlideStringUtil.base64DecodeAsBytes(this._linebuffer); // Decode base64 string as byte(s)
-			var idx = this._getDecodableIdx(bytes);
+			var byte_array = GlideStringUtil.base64DecodeAsBytes(this._linebuffer); // Decode base64 string as byte(s) using UTF-8 codepage
+			idx = this._getDecodableIdx(byte_array);
 			if (idx < this._linebuffer.length) {
 				// Use the decodable-part of the mime string
-				bytes = GlideStringUtil.base64DecodeAsBytes(this._linebuffer.substring(0, idx));
+				byte_array = GlideStringUtil.base64DecodeAsBytes(this._linebuffer.substring(0, idx));
 			    this._linebuffer = this._linebuffer.substring(idx); // Use the rest later
 			}  else {
 				this._linebuffer = '';
 			}
-
-		    this._buffer += Packages.java.lang.String(bytes);
+		    this._buffer += Packages.java.lang.String(byte_array);
 		}
 	},
 	
 	/**
 	* Find decodable part of the UTF-8 string (https://en.wikipedia.org/wiki/UTF-8)
-	* @bytes
+	* @byte_array
 	* @return {Integer}
 	*/
-	_getDecodableIdx: function(bytes) {
-	    var i = 0;
-	    var j = 0;
-	    for ( ; ; ) {
+	_getDecodableIdx: function(byte_array) {
+		var num = 0;
+		var i = 0;
+		for ( ; ; ) {
 			// Character and mime ecoding boundary?
-		    if (i <= bytes.length && (i % 3) == 0) j = i; // Yes
+			if (i <= byte_array.length && (i % 3) == 0) num = i; // Yes
+			if (i >= byte_array.length) break;
 			
-		    if (i >= bytes.length) break;
-		    if (bytes[i] >= 0 || bytes[i] < -64) {
-				// 1 byte encoding
+			// Check if encoded char is 1-byte
+			if (byte_array[i] >= 0 || byte_array[i] < -64) {
 				i++;
 			} else {
-				// C/D - 2 bytes encoding
-			    var len = 2;
+				// C/D: 2 bytes encoding
+				var len = 2;
 				
-				// E   - 3 bytes encoding
-			    if (bytes[i] <= -32) {
-				    len++;
-			        // F   - 4 bytes encoding
-				    if (bytes[i] <= -16) len++;
-			    }
-			    i += len;
-		    }
-	    }
-	    return j / 3 * 4; // Calculate the amount of the mime string to use
+				// E: 3 bytes encoding
+				if (byte_array[i] <= -32) {
+					len++;
+					// F: 4 bytes encoding
+					if (byte_array[i] <= -16) len++;
+				}
+				i += len;
+			}
+		}
+		return num / 3 * 4; // Calculate the amount of the mime string to use
 	},
 	
 	/**
