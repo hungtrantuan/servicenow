@@ -30,9 +30,9 @@ MFTV2MIDServer.prototype = {
 		this.DocumentBuilderFactory		= Packages.javax.xml.parsers.DocumentBuilderFactory;
 		
 		// Configuration settings
-        this.domainName		= this._getInstanceBaseURL(ms.getConfigParameter('url'));
+		this.domainName		= this._getInstanceBaseURL(ms.getConfigParameter('url'));
 		this.exportUsername	= ms.getConfigParameter('mid.instance.username');
-        this.exportPwd		= ms.getConfigParameter('mid.instance.password');
+		this.exportPwd		= ms.getConfigParameter('mid.instance.password');
 		
 		// Set default debug mode = false
 		this.debug = false;
@@ -524,14 +524,14 @@ MFTV2MIDServer.prototype = {
 	* @private
 	*/
 	_getJSProbe: function() {
-        this._logMsg("Start _getJSProbe()");
+		this._logMsg("Start _getJSProbe()");
 		
 		// Call _getJSProbe method from parent class
 		var params = {};
         
 		// Required parameters
-        params.filePath			= probe.getParameter("midFolder");
-        params.fileName			= probe.getParameter("fileName");
+		params.filePath			= probe.getParameter("midFolder");
+		params.fileName			= probe.getParameter("fileName");
 		params.urlREST			= probe.getParameter("urlREST");
 		
 		// Optional parameters
@@ -572,7 +572,7 @@ MFTV2MIDServer.prototype = {
 		
 		this._logMsg("Finished _getJSProbe()");
 		return params;
-    },
+	},
 	
 	/**
 	* Get base URL of the current SNOW instance
@@ -581,12 +581,12 @@ MFTV2MIDServer.prototype = {
 	* @private
 	*/
 	_getInstanceBaseURL: function (instance) {
-        var instanceBase = instance + '';
-        if (instanceBase.indexOf('/') != instanceBase.length - 1) {
-            instanceBase += "/";
-        }
-        return instanceBase;
-    },
+		var instanceBase = instance + '';
+		if (instanceBase.indexOf('/') != instanceBase.length - 1) {
+			instanceBase += "/";
+		}
+		return instanceBase;
+	},
 	
 	/**
 	* Format input number with provided pattern
@@ -614,18 +614,18 @@ MFTV2MIDServer.prototype = {
 	* @param logType
 	* @private
 	*/
-    _logMsg: function (message, logType) {
-        var prefixStr = this.type;
+	_logMsg: function (message, logType) {
+		var prefixStr = this.type;
 		if (typeof logType == 'undefined') {
 			logType = 'info';
 		}
-        if (logType == 'info' || logType == 'error') {
-            ms.log(prefixStr + " " + logType.toUpperCase() + "*** " + message);
-        }
-        if (this.debug && logType == 'debug') {
-            ms.log(prefixStr + " DEBUG *** " + message);
-        }
-    },
+		if (logType == 'info' || logType == 'error') {
+			ms.log(prefixStr + " " + logType.toUpperCase() + "*** " + message);
+		}
+		if (this.debug && logType == 'debug') {
+			ms.log(prefixStr + " DEBUG *** " + message);
+		}
+	},
 	
 	type: "MFTV2MIDServer"
 };
