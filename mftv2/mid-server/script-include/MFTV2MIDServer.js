@@ -7,7 +7,7 @@ MFTV2MIDServer.prototype = {
 	* Constructor
 	*/
 	initialize: function() {
-        this._logMsg("Start initialize()");
+		this._logMsg("Start initialize()");
 		
 		// Initializing Java packages
 		this.HttpHost					= Packages.org.apache.http.HttpHost;
