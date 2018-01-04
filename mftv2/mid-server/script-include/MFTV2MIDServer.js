@@ -41,7 +41,7 @@ MFTV2MIDServer.prototype = {
 		this.isMerge = false;
 		
 		this._logMsg("Finished initialize()");
-    },
+	},
 	
 	/*
 	* Method to get httpclient object (based on Apache HttpClient 4.3)
@@ -301,7 +301,7 @@ MFTV2MIDServer.prototype = {
 		
 		this._logMsg('Finished saveFile2MIDServer()');
 		return ret;
-    },
+	},
 	
 	/**
 	* Validate input parameter(s)
@@ -400,7 +400,7 @@ MFTV2MIDServer.prototype = {
 		}
 		
 		this._logMsg('Finished saveFile2MIDServerNMerge()');
-    },
+	},
 	
 	/**
 	* List all files that have same prefix under given folder.
